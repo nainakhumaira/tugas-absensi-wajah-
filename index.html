@@ -8,37 +8,80 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Sistem Absensi Wajah</h1>
-            <p class="subtitle">Absensi kelas dengan verifikasi kamera dan bukti cetak</p>
-        </div>
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Header Aplikasi</p>
+                <h1>Smart Attendance Campus</h1>
+                <p class="subtitle">SISTEM ABSENSI MODERN</p>
+            </div>
+            <div class="time-info">
+                <span class="time">22.03.41</span>
+                <span class="date">Minggu, 7 Juni 2026</span>
+            </div>
+        </header>
 
         <div class="main-content">
+            <section class="dashboard-section">
+                <div class="dashboard-grid">
+                    <article class="stat-card">
+                        <p class="stat-label">Total Mahasiswa</p>
+                        <p class="stat-value">0</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Hadir Hari Ini</p>
+                        <p class="stat-value">0</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Izin & Sakit</p>
+                        <p class="stat-value">0</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Alfa</p>
+                        <p class="stat-value">0</p>
+                    </article>
+                    <article class="stat-card progress-card">
+                        <p class="stat-label">Persentase</p>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <p class="progress-text">0%</p>
+                    </article>
+                </div>
+            </section>
+
             <section class="form-section">
                 <div class="section-header">
                     <div>
-                        <h2>Data Kehadiran</h2>
-                        <p>Lengkapi form ini untuk absensi dengan verifikasi wajah.</p>
+                        <h2>Form Input Kehadiran</h2>
+                        <p>Lengkapi data mahasiswa dan status kehadiran sebelum verifikasi.</p>
                     </div>
-                    <span class="badge">Elegan & Profesional</span>
+                    <span class="badge">Form Input Kehadiran</span>
                 </div>
 
                 <div class="form-grid">
                     <div class="form-group">
+                        <label for="studentId">NIM Mahasiswa</label>
+                        <input id="studentId" type="text" placeholder="Contoh: 22010123" required>
+                    </div>
+                    <div class="form-group">
                         <label for="studentName">Nama Lengkap</label>
-                        <input id="studentName" type="text" placeholder="Masukkan nama lengkap" required>
+                        <input id="studentName" type="text" placeholder="Nama Mahasiswa" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="programStudy">Program Studi</label>
+                        <input id="programStudy" type="text" placeholder="Informatika / Sistem Informasi" required>
                     </div>
                     <div class="form-group">
                         <label for="studentClass">Kelas</label>
-                        <input id="studentClass" type="text" placeholder="Contoh: TI-3A" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="lecturerName">Dosen Pengampu</label>
-                        <input id="lecturerName" type="text" placeholder="Masukkan nama dosen" required>
+                        <input id="studentClass" type="text" placeholder="IF-22B / Reguler" required>
                     </div>
                     <div class="form-group">
                         <label for="subjectName">Mata Kuliah</label>
-                        <input id="subjectName" type="text" placeholder="Masukkan mata kuliah" required>
+                        <input id="subjectName" type="text" placeholder="Pemrograman Web murni" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lecturerName">Dosen Pengampu</label>
+                        <input id="lecturerName" type="text" placeholder="Nama Dosen" required>
                     </div>
                     <div class="form-group full-width">
                         <label for="attendanceStatus">Status Kehadiran</label>
@@ -46,35 +89,39 @@
                             <option value="">Pilih status kehadiran</option>
                             <option value="Hadir">Hadir</option>
                             <option value="Izin">Izin</option>
-                            <option value="Telat">Telat</option>
-                            <option value="Alfa">Alfa</option>
                             <option value="Sakit">Sakit</option>
+                            <option value="Alfa">Alfa</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="main-action-row">
+                    <button id="saveAttendanceBtn" class="btn btn-save">☁️ Simpan Data Absensi</button>
                 </div>
             </section>
 
             <section class="camera-section">
                 <div class="section-header">
                     <div>
-                        <h2>Verifikasi Wajah</h2>
-                        <p>Aktifkan kamera dan ambil foto untuk melengkapi absensi.</p>
+                        <h2>Verifikasi Kamera / Scan Wajah</h2>
+                        <p>Pastikan wajah jelas sebelum mengambil foto untuk verifikasi.</p>
                     </div>
-                    <span class="badge">Kamera diutamakan</span>
+                    <span class="badge">Verifikasi Kamera</span>
                 </div>
 
                 <div class="camera-container">
+                    <div id="cameraStatus" class="camera-status">Kamera Belum Aktif</div>
                     <video id="cameraFeed" class="camera-feed" playsinline></video>
                     <canvas id="photoCanvas" class="photo-canvas"></canvas>
                     <div id="placeholderImage" class="placeholder-image">
                         <span>📷</span>
-                        <p>Kamera belum aktif. Klik tombol di bawah.</p>
+                        <p>Status layar kamera: Kamera Belum Aktif</p>
                     </div>
                 </div>
 
                 <div class="camera-controls">
-                    <button id="toggleCameraBtn" class="btn btn-primary">🎥 Aktifkan Kamera</button>
-                    <button id="captureBtn" class="btn btn-secondary" disabled>📸 Ambil Foto & Verifikasi</button>
+                    <button id="toggleCameraBtn" class="btn btn-primary">📹 Mulai Kamera</button>
+                    <button id="captureBtn" class="btn btn-secondary" disabled>📷 Ambil Foto</button>
                 </div>
             </section>
 
@@ -90,10 +137,14 @@
             <section id="statusSection" class="status-section hidden">
                 <div class="status-info">
                     <div id="statusContent"></div>
-                    <div class="status-actions">
-                        <button id="printBtn" class="btn btn-outline hidden">🖨️ Cetak Bukti Absensi</button>
-                    </div>
+                    <div class="status-actions"></div>
                 </div>
+            </section>
+
+            <section class="action-footer">
+                <button id="resetBtn" class="btn btn-outline">🔄 Reset</button>
+                <button id="printBtn" class="btn btn-secondary">🖨️ Cetak</button>
+                <button id="exportBtn" class="btn btn-secondary">📄 Excel</button>
             </section>
 
             <section class="info-section">

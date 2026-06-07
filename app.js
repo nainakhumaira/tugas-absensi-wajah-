@@ -1,16 +1,20 @@
 // ========================================
 // DOM Elements
 // ========================================
+const studentIdInput = document.getElementById('studentId');
 const studentNameInput = document.getElementById('studentName');
+const programStudyInput = document.getElementById('programStudy');
 const studentClassInput = document.getElementById('studentClass');
 const lecturerInput = document.getElementById('lecturerName');
 const subjectInput = document.getElementById('subjectName');
 const attendanceStatusSelect = document.getElementById('attendanceStatus');
 const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 const captureBtn = document.getElementById('captureBtn');
-const retakeBtn = document.getElementById('retakeBtn');
-const submitBtn = document.getElementById('submitBtn');
+const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
+const resetBtn = document.getElementById('resetBtn');
+const exportBtn = document.getElementById('exportBtn');
 const printBtn = document.getElementById('printBtn');
+const cameraStatus = document.getElementById('cameraStatus');
 const cameraFeed = document.getElementById('cameraFeed');
 const photoCanvas = document.getElementById('photoCanvas');
 const photoPreview = document.getElementById('photoPreview');
@@ -51,6 +55,7 @@ async function startCamera() {
         cameraFeed.play();
         cameraFeed.classList.add('active');
         placeholderImage.classList.add('hidden');
+        cameraStatus.textContent = 'Kamera Aktif';
 
         toggleCameraBtn.textContent = '🛑 Matikan Kamera';
         captureBtn.disabled = false;
@@ -71,8 +76,9 @@ function stopCamera() {
 
     cameraFeed.classList.remove('active');
     placeholderImage.classList.remove('hidden');
+    cameraStatus.textContent = 'Kamera Belum Aktif';
 
-    toggleCameraBtn.textContent = '🎥 Aktifkan Kamera';
+    toggleCameraBtn.textContent = '📹 Mulai Kamera';
     captureBtn.disabled = true;
     isCameraActive = false;
 
@@ -122,13 +128,15 @@ function retakePhoto() {
 }
 
 async function submitAttendance() {
+    const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
+    const programStudy = programStudyInput.value.trim();
     const studentClass = studentClassInput.value.trim();
     const lecturerName = lecturerInput.value.trim();
     const subjectName = subjectInput.value.trim();
     const attendanceStatus = attendanceStatusSelect.value;
 
-    if (!studentName || !studentClass || !lecturerName || !subjectName || !attendanceStatus) {
+    if (!studentId || !studentName || !programStudy || !studentClass || !lecturerName || !subjectName || !attendanceStatus) {
         showNotification('Lengkapi semua field kehadiran sebelum submit.', 'error');
         return;
     }
@@ -155,7 +163,9 @@ async function submitAttendance() {
         });
 
         const payload = {
+            nim: studentId,
             nama: studentName,
+            programStudi: programStudy,
             kelas: studentClass,
             dosen: lecturerName,
             mataKuliah: subjectName,
@@ -223,14 +233,15 @@ function showNotification(message, type = 'info') {
 
 function resetFormFields() {
     setTimeout(() => {
+        studentIdInput.value = '';
         studentNameInput.value = '';
+        programStudyInput.value = '';
         studentClassInput.value = '';
         lecturerInput.value = '';
         subjectInput.value = '';
         attendanceStatusSelect.value = '';
         capturedPhotoData = null;
         photoPreviewSection.classList.add('hidden');
-        printBtn.classList.add('hidden');
         statusSection.classList.remove('visible');
         statusSection.classList.add('hidden');
         if (isCameraActive && stream) {
@@ -240,15 +251,62 @@ function resetFormFields() {
     }, 1400);
 }
 
+function resetForm() {
+    if (isCameraActive) {
+        stopCamera();
+    }
+
+    studentIdInput.value = '';
+    studentNameInput.value = '';
+    programStudyInput.value = '';
+    studentClassInput.value = '';
+    lecturerInput.value = '';
+    subjectInput.value = '';
+    attendanceStatusSelect.value = '';
+    capturedPhotoData = null;
+    photoPreviewSection.classList.add('hidden');
+    statusSection.classList.add('hidden');
+    showNotification('Form telah di-reset.', 'info');
+}
+
+function exportToExcel() {
+    const rows = [
+        ['NIM', 'Nama Lengkap', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Dosen Pengampu', 'Status Kehadiran'],
+        [
+            studentIdInput.value.trim(),
+            studentNameInput.value.trim(),
+            programStudyInput.value.trim(),
+            studentClassInput.value.trim(),
+            subjectInput.value.trim(),
+            lecturerInput.value.trim(),
+            attendanceStatusSelect.value
+        ]
+    ];
+
+    const csvContent = rows.map(row => row.map(value => `"${value.replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'absensi_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showNotification('Data diekspor sebagai file Excel (CSV).', 'success');
+}
+
 function printAttendance() {
     window.print();
 }
 
 toggleCameraBtn.addEventListener('click', toggleCamera);
 captureBtn.addEventListener('click', capturePhoto);
-retakeBtn.addEventListener('click', retakePhoto);
-submitBtn.addEventListener('click', submitAttendance);
+saveAttendanceBtn.addEventListener('click', submitAttendance);
+resetBtn.addEventListener('click', resetForm);
+exportBtn.addEventListener('click', exportToExcel);
 printBtn.addEventListener('click', printAttendance);
+retakeBtn.addEventListener('click', retakePhoto);
 
 studentNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
