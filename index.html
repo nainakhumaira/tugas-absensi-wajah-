@@ -83,11 +83,16 @@
                         <label for="lecturerName">Dosen Pengampu</label>
                         <input id="lecturerName" type="text" placeholder="Nama Dosen" required>
                     </div>
+                    <div class="form-group">
+                        <label for="classStartTime">Jam Masuk Mata Kuliah</label>
+                        <input id="classStartTime" type="time" required>
+                    </div>
                     <div class="form-group full-width">
-                        <label for="attendanceStatus">Status Kehadiran</label>
+                        <label for="attendanceStatus">Status Kehadiran (Otomatis terdeteksi saat ambil foto)</label>
                         <select id="attendanceStatus" required>
                             <option value="">Pilih status kehadiran</option>
                             <option value="Hadir">Hadir</option>
+                            <option value="Telat Masuk">Telat Masuk</option>
                             <option value="Izin">Izin</option>
                             <option value="Sakit">Sakit</option>
                             <option value="Alfa">Alfa</option>
@@ -173,6 +178,8 @@
         <p>Sedang memproses...</p>
     </div>
 
+    <!-- Face Detection Library -->
+    <script async src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

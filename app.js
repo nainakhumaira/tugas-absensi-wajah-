@@ -7,6 +7,7 @@ const programStudyInput = document.getElementById('programStudy');
 const studentClassInput = document.getElementById('studentClass');
 const lecturerInput = document.getElementById('lecturerName');
 const subjectInput = document.getElementById('subjectName');
+const classStartTimeInput = document.getElementById('classStartTime');
 const attendanceStatusSelect = document.getElementById('attendanceStatus');
 const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 const captureBtn = document.getElementById('captureBtn');
@@ -25,14 +26,68 @@ const statusContent = document.getElementById('statusContent');
 const notification = document.getElementById('notification');
 const notificationMessage = document.getElementById('notificationMessage');
 const loadingSpinner = document.getElementById('loadingSpinner');
+const retakeBtn = document.getElementById('retakeBtn');
+const submitBtn = document.getElementById('submitBtn');
 
 let stream = null;
 let isCameraActive = false;
 let capturedPhotoData = null;
+let faceDetected = false;
 
 const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
-async function toggleCamera() {
+// ========================================
+// Auto-Detection Functions
+// ========================================
+async function detectAttendanceStatus() {
+    try {
+        // Load models if not already loaded
+        if (!faceapi.nets.tinyFaceDetector.isLoaded) {
+            await faceapi.nets.tinyFaceDetector.load(window.location.origin + '/models');
+        }
+
+        // Detect faces in the canvas
+        const detection = await faceapi.detectSingleFace(photoCanvas, new faceapi.TinyFaceDetectorOptions());
+        
+        // Get current time
+        const now = new Date();
+        const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                               now.getMinutes().toString().padStart(2, '0');
+        
+        // Get class start time
+        const classStartTime = classStartTimeInput.value;
+        
+        let detectedStatus = 'Alfa'; // Default to absent
+        
+        if (detection) {
+            // Face detected
+            faceDetected = true;
+            
+            if (classStartTime) {
+                // Compare times
+                if (currentTimeStr <= classStartTime) {
+                    detectedStatus = 'Hadir'; // Present (on time)
+                } else {
+                    detectedStatus = 'Telat Masuk'; // Late
+                }
+            } else {
+                detectedStatus = 'Hadir'; // Face detected, assume present
+            }
+        } else {
+            // No face detected
+            faceDetected = false;
+            detectedStatus = 'Alfa'; // Absent
+        }
+        
+        return detectedStatus;
+    } catch (error) {
+        console.error('Error in face detection:', error);
+        // If detection fails, return empty and let user choose
+        return '';
+    }
+}
+
+
     if (isCameraActive) {
         stopCamera();
     } else {
@@ -106,7 +161,26 @@ function capturePhoto() {
     cameraFeed.classList.remove('active');
     placeholderImage.classList.remove('hidden');
 
-    showNotification('Foto berhasil diambil. Anda dapat melanjutkan ke absensi.', 'success');
+    // Auto-detect attendance status
+    detectAttendanceStatus().then(status => {
+        if (status) {
+            attendanceStatusSelect.value = status;
+            let statusMsg = '';
+            if (status === 'Hadir') {
+                statusMsg = '✅ Wajah terdeteksi - Status: HADIR (Tepat Waktu)';
+            } else if (status === 'Telat Masuk') {
+                statusMsg = '⏰ Wajah terdeteksi - Status: TELAT MASUK';
+            } else if (status === 'Alfa') {
+                statusMsg = '❌ Wajah TIDAK terdeteksi - Status: ALFA';
+            }
+            showNotification(statusMsg, status === 'Alfa' ? 'error' : 'success');
+        } else {
+            showNotification('Foto berhasil diambil. Status kehadiran akan ditentukan secara otomatis.', 'success');
+        }
+    }).catch(err => {
+        console.error('Error detecting status:', err);
+        showNotification('Foto berhasil diambil. Anda dapat melanjutkan ke absensi.', 'success');
+    });
 }
 
 function retakePhoto() {
@@ -134,9 +208,10 @@ async function submitAttendance() {
     const studentClass = studentClassInput.value.trim();
     const lecturerName = lecturerInput.value.trim();
     const subjectName = subjectInput.value.trim();
+    const classStartTime = classStartTimeInput.value;
     const attendanceStatus = attendanceStatusSelect.value;
 
-    if (!studentId || !studentName || !programStudy || !studentClass || !lecturerName || !subjectName || !attendanceStatus) {
+    if (!studentId || !studentName || !programStudy || !studentClass || !lecturerName || !subjectName || !classStartTime || !attendanceStatus) {
         showNotification('Lengkapi semua field kehadiran sebelum submit.', 'error');
         return;
     }
@@ -169,6 +244,7 @@ async function submitAttendance() {
             kelas: studentClass,
             dosen: lecturerName,
             mataKuliah: subjectName,
+            jamMasuk: classStartTime,
             status: attendanceStatus,
             tanggal: date,
             jam: time,
@@ -205,9 +281,10 @@ function showSuccessStatus(data) {
             <p><strong>Kelas:</strong> ${data.kelas}</p>
             <p><strong>Dosen Pengampu:</strong> ${data.dosen}</p>
             <p><strong>Mata Kuliah:</strong> ${data.mataKuliah}</p>
+            <p><strong>Jam Masuk Mata Kuliah:</strong> ${data.jamMasuk}</p>
             <p><strong>Status Kehadiran:</strong> ${data.status}</p>
             <p><strong>Tanggal:</strong> ${data.tanggal}</p>
-            <p><strong>Jam:</strong> ${data.jam}</p>
+            <p><strong>Jam Absen:</strong> ${data.jam}</p>
             <p style="margin-top: 16px; color: var(--text);">Data tersimpan di Google Spreadsheet dan siap dicetak.</p>
         </div>
     `;
@@ -239,6 +316,7 @@ function resetFormFields() {
         studentClassInput.value = '';
         lecturerInput.value = '';
         subjectInput.value = '';
+        classStartTimeInput.value = '';
         attendanceStatusSelect.value = '';
         capturedPhotoData = null;
         photoPreviewSection.classList.add('hidden');
@@ -262,6 +340,7 @@ function resetForm() {
     studentClassInput.value = '';
     lecturerInput.value = '';
     subjectInput.value = '';
+    classStartTimeInput.value = '';
     attendanceStatusSelect.value = '';
     capturedPhotoData = null;
     photoPreviewSection.classList.add('hidden');
@@ -271,13 +350,14 @@ function resetForm() {
 
 function exportToExcel() {
     const rows = [
-        ['NIM', 'Nama Lengkap', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Dosen Pengampu', 'Status Kehadiran'],
+        ['NIM', 'Nama Lengkap', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Jam Masuk Mata Kuliah', 'Dosen Pengampu', 'Status Kehadiran'],
         [
             studentIdInput.value.trim(),
             studentNameInput.value.trim(),
             programStudyInput.value.trim(),
             studentClassInput.value.trim(),
             subjectInput.value.trim(),
+            classStartTimeInput.value,
             lecturerInput.value.trim(),
             attendanceStatusSelect.value
         ]
@@ -306,7 +386,8 @@ saveAttendanceBtn.addEventListener('click', submitAttendance);
 resetBtn.addEventListener('click', resetForm);
 exportBtn.addEventListener('click', exportToExcel);
 printBtn.addEventListener('click', printAttendance);
-retakeBtn.addEventListener('click', retakePhoto);
+if (retakeBtn) retakeBtn.addEventListener('click', retakePhoto);
+if (submitBtn) submitBtn.addEventListener('click', submitAttendance);
 
 studentNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -321,5 +402,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /*
 Cara setup Google Apps Script tetap sama, tetapi tambahkan kolom tambahan berikut:
-Nama | Kelas | Dosen Pengampu | Mata Kuliah | Status Kehadiran | Tanggal | Jam | Foto
+Nama | Kelas | Dosen Pengampu | Mata Kuliah | Jam Masuk | Status Kehadiran | Tanggal | Jam | Foto
 */
