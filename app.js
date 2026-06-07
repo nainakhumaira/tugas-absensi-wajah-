@@ -88,6 +88,7 @@ async function detectAttendanceStatus() {
 }
 
 
+async function toggleCamera() {
     if (isCameraActive) {
         stopCamera();
     } else {
@@ -399,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Aplikasi Absensi Wajah siap digunakan');
     showNotification('Isi data lengkap dan aktifkan kamera untuk verifikasi.', 'info');
 });
+
 
 /*
 Cara setup Google Apps Script tetap sama, tetapi tambahkan kolom tambahan berikut:
