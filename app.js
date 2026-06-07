@@ -2,10 +2,15 @@
 // DOM Elements
 // ========================================
 const studentNameInput = document.getElementById('studentName');
+const studentClassInput = document.getElementById('studentClass');
+const lecturerInput = document.getElementById('lecturerName');
+const subjectInput = document.getElementById('subjectName');
+const attendanceStatusSelect = document.getElementById('attendanceStatus');
 const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 const captureBtn = document.getElementById('captureBtn');
 const retakeBtn = document.getElementById('retakeBtn');
 const submitBtn = document.getElementById('submitBtn');
+const printBtn = document.getElementById('printBtn');
 const cameraFeed = document.getElementById('cameraFeed');
 const photoCanvas = document.getElementById('photoCanvas');
 const photoPreview = document.getElementById('photoPreview');
@@ -17,25 +22,17 @@ const notification = document.getElementById('notification');
 const notificationMessage = document.getElementById('notificationMessage');
 const loadingSpinner = document.getElementById('loadingSpinner');
 
-// ========================================
-// State Management
-// ========================================
 let stream = null;
 let isCameraActive = false;
 let capturedPhotoData = null;
 
-// ===== GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA =====
-// Dokumentasi setup ada di akhir file
 const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
-// ========================================
-// Camera Functions
-// ========================================
 async function toggleCamera() {
     if (isCameraActive) {
         stopCamera();
     } else {
-        startCamera();
+        await startCamera();
     }
 }
 
@@ -51,6 +48,7 @@ async function startCamera() {
         });
 
         cameraFeed.srcObject = stream;
+        cameraFeed.play();
         cameraFeed.classList.add('active');
         placeholderImage.classList.add('hidden');
 
@@ -58,16 +56,17 @@ async function startCamera() {
         captureBtn.disabled = false;
         isCameraActive = true;
 
-        showNotification('Kamera berhasil diaktifkan', 'success');
+        showNotification('Kamera berhasil diaktifkan. Silakan verifikasi wajah.', 'success');
     } catch (error) {
         console.error('Error accessing camera:', error);
-        showNotification('Gagal mengakses kamera. Pastikan Anda telah memberikan izin.', 'error');
+        showNotification('Gagal mengakses kamera. Pastikan Anda memberikan izin dan gunakan browser yang mendukung.', 'error');
     }
 }
 
 function stopCamera() {
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        stream = null;
     }
 
     cameraFeed.classList.remove('active');
@@ -77,72 +76,72 @@ function stopCamera() {
     captureBtn.disabled = true;
     isCameraActive = false;
 
-    showNotification('Kamera dimatikan', 'success');
+    showNotification('Kamera dimatikan.', 'info');
 }
 
-// ========================================
-// Photo Capture Function
-// ========================================
 function capturePhoto() {
-    if (!isCameraActive) {
-        showNotification('Aktivkan kamera terlebih dahulu', 'error');
+    if (!isCameraActive || !stream) {
+        showNotification('Aktifkan kamera terlebih dahulu untuk verifikasi wajah.', 'error');
         return;
     }
 
-    // Set canvas dimensions
     photoCanvas.width = cameraFeed.videoWidth;
     photoCanvas.height = cameraFeed.videoHeight;
 
-    // Get canvas context and flip horizontally (mirror effect)
     const context = photoCanvas.getContext('2d');
-    context.translate(photoCanvas.width, 0);
-    context.scale(-1, 1);
-    context.drawImage(cameraFeed, 0, 0);
+    context.setTransform(-1, 0, 0, 1, photoCanvas.width, 0);
+    context.drawImage(cameraFeed, 0, 0, photoCanvas.width, photoCanvas.height);
 
-    // Get image data as base64
-    capturedPhotoData = photoCanvas.toDataURL('image/jpeg', 0.8);
-
-    // Display preview
+    capturedPhotoData = photoCanvas.toDataURL('image/jpeg', 0.85);
     photoPreview.src = capturedPhotoData;
     photoPreviewSection.classList.remove('hidden');
+    statusSection.classList.add('hidden');
 
-    // Hide camera and show preview
     cameraFeed.classList.remove('active');
-    placeholderImage.classList.add('hidden');
+    placeholderImage.classList.remove('hidden');
 
-    showNotification('Foto berhasil diambil', 'success');
+    showNotification('Foto berhasil diambil. Anda dapat melanjutkan ke absensi.', 'success');
 }
 
 function retakePhoto() {
-    photoPreviewSection.classList.add('hidden');
     capturedPhotoData = null;
+    photoPreviewSection.classList.add('hidden');
+    statusSection.classList.add('hidden');
+    printBtn.classList.add('hidden');
 
-    cameraFeed.classList.add('active');
+    if (isCameraActive && stream) {
+        cameraFeed.classList.add('active');
+        placeholderImage.classList.add('hidden');
+    } else {
+        toggleCameraBtn.textContent = '🎥 Aktifkan Kamera';
+        captureBtn.disabled = true;
+        placeholderImage.classList.remove('hidden');
+    }
 
-    showNotification('Siap untuk mengambil foto ulang', 'success');
+    showNotification('Siap untuk mengambil foto ulang.', 'info');
 }
 
-// ========================================
-// Data Submission Function
-// ========================================
 async function submitAttendance() {
     const studentName = studentNameInput.value.trim();
+    const studentClass = studentClassInput.value.trim();
+    const lecturerName = lecturerInput.value.trim();
+    const subjectName = subjectInput.value.trim();
+    const attendanceStatus = attendanceStatusSelect.value;
 
-    if (!studentName) {
-        showNotification('Silakan masukkan nama terlebih dahulu', 'error');
+    if (!studentName || !studentClass || !lecturerName || !subjectName || !attendanceStatus) {
+        showNotification('Lengkapi semua field kehadiran sebelum submit.', 'error');
         return;
     }
 
     if (!capturedPhotoData) {
-        showNotification('Silakan ambil foto terlebih dahulu', 'error');
+        showNotification('Ambil foto verifikasi wajah terlebih dahulu.', 'error');
         return;
     }
 
-    // Show loading spinner
     loadingSpinner.classList.remove('hidden');
+    loadingSpinner.classList.add('visible');
 
     try {
-        // Prepare data
         const now = new Date();
         const date = now.toLocaleDateString('id-ID', {
             year: 'numeric',
@@ -157,163 +156,112 @@ async function submitAttendance() {
 
         const payload = {
             nama: studentName,
+            kelas: studentClass,
+            dosen: lecturerName,
+            mataKuliah: subjectName,
+            status: attendanceStatus,
             tanggal: date,
             jam: time,
             foto: capturedPhotoData
         };
 
-        // Send data to Google Apps Script
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         });
 
-        // Hide loading spinner
+        loadingSpinner.classList.remove('visible');
         loadingSpinner.classList.add('hidden');
-
-        // Show success status
-        showSuccessStatus(studentName, date, time);
-
-        // Reset form
-        resetForm();
-
+        showSuccessStatus(payload);
+        resetFormFields();
     } catch (error) {
         console.error('Error submitting attendance:', error);
+        loadingSpinner.classList.remove('visible');
         loadingSpinner.classList.add('hidden');
-        showNotification('Gagal mengirim data. Periksa koneksi internet Anda.', 'error');
+        showNotification('Gagal menyimpan data. Periksa koneksi internet dan URL Apps Script.', 'error');
     }
 }
 
-// ========================================
-// UI Helper Functions
-// ========================================
-function showSuccessStatus(name, date, time) {
+function showSuccessStatus(data) {
     statusContent.innerHTML = `
         <div class="status-success">
-            <div class="check-icon">✅</div>
-            <h3>Absensi Berhasil!</h3>
-            <p><strong>Nama:</strong> ${name}</p>
-            <p><strong>Tanggal:</strong> ${date}</p>
-            <p><strong>Jam:</strong> ${time}</p>
-            <p style="margin-top: 15px; color: #10b981;">Data telah disimpan ke Google Spreadsheet</p>
+            <span class="check-icon">✅</span>
+            <h3>Absensi Berhasil</h3>
+            <p><strong>Nama:</strong> ${data.nama}</p>
+            <p><strong>Kelas:</strong> ${data.kelas}</p>
+            <p><strong>Dosen Pengampu:</strong> ${data.dosen}</p>
+            <p><strong>Mata Kuliah:</strong> ${data.mataKuliah}</p>
+            <p><strong>Status Kehadiran:</strong> ${data.status}</p>
+            <p><strong>Tanggal:</strong> ${data.tanggal}</p>
+            <p><strong>Jam:</strong> ${data.jam}</p>
+            <p style="margin-top: 16px; color: var(--text);">Data tersimpan di Google Spreadsheet dan siap dicetak.</p>
         </div>
     `;
-    statusSection.classList.remove('hidden');
 
-    showNotification('✅ Absensi berhasil disimpan!', 'success');
+    statusSection.classList.remove('hidden');
+    statusSection.classList.add('visible');
+    printBtn.classList.remove('hidden');
+    showNotification('Absensi berhasil. Anda dapat mencetak bukti jika diperlukan.', 'success');
 }
 
 function showNotification(message, type = 'info') {
     notificationMessage.textContent = message;
     notification.classList.remove('hidden');
-    notification.classList.remove('removing');
 
     const notificationContentEl = notification.querySelector('.notification-content');
     notificationContentEl.className = `notification-content ${type}`;
 
-    // Auto remove notification after 4 seconds
-    setTimeout(() => {
-        notification.classList.add('removing');
-        setTimeout(() => {
-            notification.classList.add('hidden');
-        }, 300);
-    }, 4000);
+    clearTimeout(notification.hideTimeout);
+    notification.hideTimeout = setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 4200);
 }
 
-function resetForm() {
-    // Reset after 3 seconds
+function resetFormFields() {
     setTimeout(() => {
         studentNameInput.value = '';
-        photoPreviewSection.classList.add('hidden');
-        statusSection.classList.add('hidden');
+        studentClassInput.value = '';
+        lecturerInput.value = '';
+        subjectInput.value = '';
+        attendanceStatusSelect.value = '';
         capturedPhotoData = null;
-
-        // Restart camera
-        if (isCameraActive) {
+        photoPreviewSection.classList.add('hidden');
+        printBtn.classList.add('hidden');
+        statusSection.classList.remove('visible');
+        statusSection.classList.add('hidden');
+        if (isCameraActive && stream) {
             cameraFeed.classList.add('active');
+            placeholderImage.classList.add('hidden');
         }
-    }, 3000);
+    }, 1400);
 }
 
-// ========================================
-// Event Listeners
-// ========================================
+function printAttendance() {
+    window.print();
+}
+
 toggleCameraBtn.addEventListener('click', toggleCamera);
 captureBtn.addEventListener('click', capturePhoto);
 retakeBtn.addEventListener('click', retakePhoto);
 submitBtn.addEventListener('click', submitAttendance);
+printBtn.addEventListener('click', printAttendance);
 
-// Enter key to submit
 studentNameInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !isCameraActive) {
-        toggleCamera();
+    if (e.key === 'Enter') {
+        e.preventDefault();
     }
 });
 
-// ========================================
-// Initialization
-// ========================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Aplikasi Absensi Wajah siap digunakan');
-    showNotification('Selamat datang! Silakan mulai dengan memasukkan nama Anda.', 'info');
+    showNotification('Isi data lengkap dan aktifkan kamera untuk verifikasi.', 'info');
 });
 
-// ========================================
-// SETUP GOOGLE APPS SCRIPT
-// ========================================
 /*
-LANGKAH-LANGKAH SETUP:
-
-1. Buka Google Drive dan buat Google Spreadsheet baru
-2. Beri nama spreadsheet: "Data Absensi Wajah"
-3. Buat kolom di Sheet dengan nama: Nama | Tanggal | Jam | Foto
-
-4. Buka Apps Script (Extensions > Apps Script)
-5. Hapus kode default dan ganti dengan kode berikut:
-
-------- COPY KODE INI KE GOOGLE APPS SCRIPT -------
-
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = spreadsheet.getSheets()[0];
-    
-    // Append data ke sheet
-    sheet.appendRow([
-      data.nama,
-      data.tanggal,
-      data.jam,
-      data.foto
-    ]);
-    
-    // Simpan spreadsheet
-    SpreadsheetApp.flush();
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({status: 'success'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({status: 'error', message: error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-------- SELESAI COPY -------
-
-6. Deploy sebagai Web App:
-   - Klik "Deploy" > "New Deployment"
-   - Pilih type "Web app"
-   - Execute as: Akun Anda
-   - Who has access: "Anyone"
-   - Klik Deploy dan copy URL
-
-7. Ganti 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE' di atas dengan URL yang di-copy
-
-SELESAI! Aplikasi siap digunakan.
+Cara setup Google Apps Script tetap sama, tetapi tambahkan kolom tambahan berikut:
+Nama | Kelas | Dosen Pengampu | Mata Kuliah | Status Kehadiran | Tanggal | Jam | Foto
 */

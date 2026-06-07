@@ -8,109 +8,115 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
-            <h1>📸 Sistem Absensi Wajah</h1>
-            <p class="subtitle">Absensi Modern dengan Teknologi Pengenalan Wajah</p>
+            <h1>Sistem Absensi Wajah</h1>
+            <p class="subtitle">Absensi kelas dengan verifikasi kamera dan bukti cetak</p>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Form Section -->
-            <div class="form-section">
-                <div class="form-group">
-                    <label for="studentName">Nama Mahasiswa</label>
-                    <input 
-                        type="text" 
-                        id="studentName" 
-                        placeholder="Masukkan nama lengkap Anda" 
-                        required
-                    >
+            <section class="form-section">
+                <div class="section-header">
+                    <div>
+                        <h2>Data Kehadiran</h2>
+                        <p>Lengkapi form ini untuk absensi dengan verifikasi wajah.</p>
+                    </div>
+                    <span class="badge">Elegan & Profesional</span>
                 </div>
-            </div>
 
-            <!-- Camera Section -->
-            <div class="camera-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="studentName">Nama Lengkap</label>
+                        <input id="studentName" type="text" placeholder="Masukkan nama lengkap" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentClass">Kelas</label>
+                        <input id="studentClass" type="text" placeholder="Contoh: TI-3A" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lecturerName">Dosen Pengampu</label>
+                        <input id="lecturerName" type="text" placeholder="Masukkan nama dosen" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="subjectName">Mata Kuliah</label>
+                        <input id="subjectName" type="text" placeholder="Masukkan mata kuliah" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="attendanceStatus">Status Kehadiran</label>
+                        <select id="attendanceStatus" required>
+                            <option value="">Pilih status kehadiran</option>
+                            <option value="Hadir">Hadir</option>
+                            <option value="Izin">Izin</option>
+                            <option value="Telat">Telat</option>
+                            <option value="Alfa">Alfa</option>
+                            <option value="Sakit">Sakit</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section class="camera-section">
+                <div class="section-header">
+                    <div>
+                        <h2>Verifikasi Wajah</h2>
+                        <p>Aktifkan kamera dan ambil foto untuk melengkapi absensi.</p>
+                    </div>
+                    <span class="badge">Kamera diutamakan</span>
+                </div>
+
                 <div class="camera-container">
-                    <video 
-                        id="cameraFeed" 
-                        class="camera-feed" 
-                        playsinline
-                    ></video>
-                    <canvas 
-                        id="photoCanvas" 
-                        class="photo-canvas"
-                    ></canvas>
+                    <video id="cameraFeed" class="camera-feed" playsinline></video>
+                    <canvas id="photoCanvas" class="photo-canvas"></canvas>
                     <div id="placeholderImage" class="placeholder-image">
                         <span>📷</span>
-                        <p>Kamera belum aktif</p>
+                        <p>Kamera belum aktif. Klik tombol di bawah.</p>
                     </div>
                 </div>
 
-                <!-- Camera Controls -->
                 <div class="camera-controls">
-                    <button 
-                        id="toggleCameraBtn" 
-                        class="btn btn-primary"
-                    >
-                        🎥 Aktifkan Kamera
-                    </button>
-                    <button 
-                        id="captureBtn" 
-                        class="btn btn-secondary"
-                        disabled
-                    >
-                        📸 Ambil Foto
-                    </button>
+                    <button id="toggleCameraBtn" class="btn btn-primary">🎥 Aktifkan Kamera</button>
+                    <button id="captureBtn" class="btn btn-secondary" disabled>📸 Ambil Foto & Verifikasi</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- Photo Preview Section -->
-            <div id="photoPreviewSection" class="photo-preview-section hidden">
-                <h3>Pratinjau Foto</h3>
+            <section id="photoPreviewSection" class="photo-preview-section hidden">
+                <h3>Pratinjau Foto Verifikasi</h3>
                 <img id="photoPreview" class="photo-preview" alt="Pratinjau Foto">
                 <div class="photo-actions">
-                    <button id="retakeBtn" class="btn btn-secondary">
-                        🔄 Ambil Ulang
-                    </button>
-                    <button id="submitBtn" class="btn btn-success">
-                        ✅ Absen Masuk
-                    </button>
+                    <button id="retakeBtn" class="btn btn-secondary">🔄 Ambil Ulang</button>
+                    <button id="submitBtn" class="btn btn-success">✅ Absen Masuk</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- Status Section -->
-            <div id="statusSection" class="status-section hidden">
+            <section id="statusSection" class="status-section hidden">
                 <div class="status-info">
                     <div id="statusContent"></div>
+                    <div class="status-actions">
+                        <button id="printBtn" class="btn btn-outline hidden">🖨️ Cetak Bukti Absensi</button>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Info Section -->
-            <div class="info-section">
+            <section class="info-section">
                 <div class="info-box">
-                    <h4>ℹ️ Panduan Penggunaan</h4>
+                    <h4>Petunjuk cepat</h4>
                     <ul>
-                        <li>Masukkan nama lengkap Anda terlebih dahulu</li>
-                        <li>Klik tombol "Aktifkan Kamera" untuk mengakses kamera</li>
-                        <li>Posisikan wajah Anda di tengah layar dengan pencahayaan yang baik</li>
-                        <li>Klik "Ambil Foto" untuk menangkap foto wajah</li>
-                        <li>Klik "Absen Masuk" untuk menyimpan data kehadiran</li>
-                        <li>Data akan tersimpan otomatis ke Google Spreadsheet</li>
+                        <li>Isi semua informasi kelas terlebih dahulu</li>
+                        <li>Aktifkan kamera agar verifikasi wajah dapat dilakukan</li>
+                        <li>Ambil foto setelah wajah terlihat jelas</li>
+                        <li>Tekan "Absen Masuk" untuk menyimpan data</li>
+                        <li>Print bukti jika ingin simpan fisik</li>
                     </ul>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 
-    <!-- Notification -->
     <div id="notification" class="notification hidden">
         <div class="notification-content">
             <span id="notificationMessage"></span>
         </div>
     </div>
 
-    <!-- Loading Spinner -->
     <div id="loadingSpinner" class="loading-spinner hidden">
         <div class="spinner"></div>
         <p>Sedang memproses...</p>
