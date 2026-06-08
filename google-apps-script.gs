@@ -5,10 +5,13 @@ function doPost(e) {
     const sheet = spreadsheet.getSheets()[0];
 
     sheet.appendRow([
+      data.nim,
       data.nama,
+      data.programStudi,
       data.kelas,
       data.dosen,
       data.mataKuliah,
+      data.jamMasuk,
       data.status,
       data.tanggal,
       data.jam,
@@ -31,22 +34,25 @@ function setupSheet() {
   try {
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = spreadsheet.getSheets()[0];
-    const header = sheet.getRange(1, 1, 1, 8).getValues();
+    const header = sheet.getRange(1, 1, 1, 11).getValues();
 
-    if (header[0][0] !== 'Nama') {
+    if (header[0][0] !== 'NIM') {
       sheet.insertRow(1);
-      sheet.getRange(1, 1, 1, 8).setValues([[
+      sheet.getRange(1, 1, 1, 11).setValues([[
+        'NIM',
         'Nama',
+        'Program Studi',
         'Kelas',
         'Dosen Pengampu',
         'Mata Kuliah',
+        'Jam Masuk',
         'Status Kehadiran',
         'Tanggal',
         'Jam',
         'Foto'
       ]]);
 
-      const headerRange = sheet.getRange(1, 1, 1, 8);
+      const headerRange = sheet.getRange(1, 1, 1, 11);
       headerRange.setFontWeight('bold');
       headerRange.setBackground('#1a1a1a');
       headerRange.setFontColor('#ffffff');
@@ -59,14 +65,17 @@ function setupSheet() {
 function testPostRequest() {
   try {
     const testData = {
+      nim: '22010123',
       nama: 'Test User',
-      kelas: 'TI-3A',
+      programStudi: 'Informatika',
+      kelas: 'IF-22B',
       dosen: 'Dr. Andi',
       mataKuliah: 'Pemrograman Web',
+      jamMasuk: '08:00',
       status: 'Hadir',
       tanggal: new Date().toLocaleDateString('id-ID', {year: 'numeric', month: '2-digit', day: '2-digit'}),
       jam: new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit', second: '2-digit'}),
-      foto: 'data:image/jpeg;base64,/9j/4AAQSkZJRg...' 
+      foto: 'data:image/jpeg;base64,/9j/4AAQSkZJRg...'
     };
 
     const mockEvent = {

@@ -34,57 +34,58 @@ let isCameraActive = false;
 let capturedPhotoData = null;
 let faceDetected = false;
 
-const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+const GOOGLE_APPS_SCRIPT_URL = ''; // Isi dengan URL Web App Google Apps Script Anda
+const DEFAULT_EXPORT_HEADERS = [
+    'NIM',
+    'Nama Lengkap',
+    'Program Studi',
+    'Kelas',
+    'Mata Kuliah',
+    'Jam Masuk Mata Kuliah',
+    'Dosen Pengampu',
+    'Status Kehadiran',
+    'Tanggal',
+    'Jam'
+];
 
 // ========================================
 // Auto-Detection Functions
 // ========================================
 async function detectAttendanceStatus() {
-    try {
-        // Load models if not already loaded
-        if (!faceapi.nets.tinyFaceDetector.isLoaded) {
-            await faceapi.nets.tinyFaceDetector.load(window.location.origin + '/models');
-        }
+    const now = new Date();
+    const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' +
+                           now.getMinutes().toString().padStart(2, '0');
+    const classStartTime = classStartTimeInput.value;
+    let detectedStatus = '';
 
-        // Detect faces in the canvas
-        const detection = await faceapi.detectSingleFace(photoCanvas, new faceapi.TinyFaceDetectorOptions());
-        
-        // Get current time
-        const now = new Date();
-        const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                               now.getMinutes().toString().padStart(2, '0');
-        
-        // Get class start time
-        const classStartTime = classStartTimeInput.value;
-        
-        let detectedStatus = 'Alfa'; // Default to absent
-        
-        if (detection) {
-            // Face detected
-            faceDetected = true;
-            
-            if (classStartTime) {
-                // Compare times
-                if (currentTimeStr <= classStartTime) {
-                    detectedStatus = 'Hadir'; // Present (on time)
-                } else {
-                    detectedStatus = 'Telat Masuk'; // Late
-                }
-            } else {
-                detectedStatus = 'Hadir'; // Face detected, assume present
+    if (window.faceapi && faceapi.nets && faceapi.nets.tinyFaceDetector) {
+        try {
+            if (faceapi.nets.tinyFaceDetector.isLoaded !== true) {
+                await faceapi.nets.tinyFaceDetector.load('/models');
             }
-        } else {
-            // No face detected
-            faceDetected = false;
-            detectedStatus = 'Alfa'; // Absent
+
+            const detection = await faceapi.detectSingleFace(photoCanvas, new faceapi.TinyFaceDetectorOptions());
+            if (detection) {
+                faceDetected = true;
+                detectedStatus = classStartTime && currentTimeStr <= classStartTime ? 'Hadir' : 'Telat Masuk';
+            } else {
+                faceDetected = false;
+                detectedStatus = 'Alfa';
+            }
+        } catch (error) {
+            console.warn('Face detection unavailable, fallback ke status berdasarkan waktu.', error);
         }
-        
-        return detectedStatus;
-    } catch (error) {
-        console.error('Error in face detection:', error);
-        // If detection fails, return empty and let user choose
-        return '';
     }
+
+    if (!detectedStatus) {
+        if (classStartTime) {
+            detectedStatus = currentTimeStr <= classStartTime ? 'Hadir' : 'Telat Masuk';
+        } else {
+            detectedStatus = 'Hadir';
+        }
+    }
+
+    return detectedStatus;
 }
 
 
@@ -252,14 +253,23 @@ async function submitAttendance() {
             foto: capturedPhotoData
         };
 
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_URL_HERE')) {
+            throw new Error('URL Google Apps Script belum diatur. Perbarui nilai GOOGLE_APPS_SCRIPT_URL di app.js.');
+        }
+
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         });
+
+        const result = await response.json();
+        if (!response.ok || result.status === 'error') {
+            throw new Error(result.message || 'Respon server gagal.');
+        }
 
         loadingSpinner.classList.remove('visible');
         loadingSpinner.classList.add('hidden');
@@ -278,7 +288,9 @@ function showSuccessStatus(data) {
         <div class="status-success">
             <span class="check-icon">✅</span>
             <h3>Absensi Berhasil</h3>
+            <p><strong>NIM:</strong> ${data.nim}</p>
             <p><strong>Nama:</strong> ${data.nama}</p>
+            <p><strong>Program Studi:</strong> ${data.programStudi}</p>
             <p><strong>Kelas:</strong> ${data.kelas}</p>
             <p><strong>Dosen Pengampu:</strong> ${data.dosen}</p>
             <p><strong>Mata Kuliah:</strong> ${data.mataKuliah}</p>
@@ -350,8 +362,9 @@ function resetForm() {
 }
 
 function exportToExcel() {
+    const sanitize = value => String(value ?? '').replace(/"/g, '""');
     const rows = [
-        ['NIM', 'Nama Lengkap', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Jam Masuk Mata Kuliah', 'Dosen Pengampu', 'Status Kehadiran'],
+        DEFAULT_EXPORT_HEADERS,
         [
             studentIdInput.value.trim(),
             studentNameInput.value.trim(),
@@ -360,12 +373,17 @@ function exportToExcel() {
             subjectInput.value.trim(),
             classStartTimeInput.value,
             lecturerInput.value.trim(),
-            attendanceStatusSelect.value
+            attendanceStatusSelect.value,
+            new Date().toLocaleDateString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+            new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         ]
     ];
 
-    const csvContent = rows.map(row => row.map(value => `"${value.replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = rows
+        .map(row => row.map(value => `"${sanitize(value)}"`).join(','))
+        .join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
